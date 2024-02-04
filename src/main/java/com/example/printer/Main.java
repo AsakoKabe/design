@@ -9,7 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class Main {
-    public static void getRate(String uri) throws Exception {
+    public static void getRequest(String uri) throws Exception {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(uri))
@@ -27,7 +27,7 @@ public class Main {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         executor.scheduleAtFixedRate(() -> {
             try {
-                getRate(uri);
+                getRequest(uri);
             } catch (Exception ignored) {
             }
         }, 0, 5, TimeUnit.SECONDS);
