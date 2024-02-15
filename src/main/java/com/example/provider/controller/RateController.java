@@ -1,23 +1,26 @@
 package com.example.provider.controller;
 
 import com.example.provider.model.Currency;
-import com.example.provider.model.Transfer;
+import com.example.provider.model.transfer.Transfer;
+import com.example.provider.model.transfer.TransferService;
 import com.example.provider.service.RandomConvertor;
 import com.example.provider.service.CurrencyConvertor;
 import com.example.provider.utils.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 
-@RestController
+import java.util.UUID;
+
+@Service
 public class RateController {
     private final CurrencyConvertor currencyConvertor;
+    private static final int pushRate = 60000; // 60000 ms == 1 min
+    private final TransferService transferService;
 
     @Autowired
-    public RateController(CurrencyConvertor currencyConvertor) {
+    public RateController(CurrencyConvertor currencyConvertor, TransferService transferService) {
+        this.transferService = transferService;
         this.currencyConvertor = currencyConvertor;
         this.addCurrencyConvertorMapping();
     }
@@ -36,33 +39,12 @@ public class RateController {
         );
 
     }
+    @Scheduled(fixedRate = pushRate)
+    public void writeToDatabase() {
+        Pair<Currency, Currency> currencyPair = new Pair<>(Currency.USD, Currency.RUB);
 
-    @GetMapping(value = "/rate/{from}/{to}")
-    public ResponseEntity<?> getRate(
-            @PathVariable(name = "from") Currency from,
-            @PathVariable(name = "to") Currency to
-    ) {
-        Transfer transfer = createTransfer(from, to);
-
-        return transfer != null
-                ? new ResponseEntity<>(transfer, HttpStatus.OK)
-                : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        Transfer transfer = this.currencyConvertor.createTransfer(currencyPair);
+        transferService.saveTransfer(transfer);
     }
 
-    private Transfer createTransfer(Currency from, Currency to) {
-        Pair<Currency, Currency> currencyPair = new Pair<>(from, to);
-        if (isSameCurrency(currencyPair)){
-            return createZeroTransfer(currencyPair);
-        }
-
-        return this.currencyConvertor.createTransfer(currencyPair);
-    }
-
-    private static Transfer createZeroTransfer(Pair<Currency, Currency> currencyPair) {
-        return new Transfer(currencyPair.getLeft(), currencyPair.getRight(), 0);
-    }
-
-    private static boolean isSameCurrency(Pair<Currency, Currency> currencyPair) {
-        return currencyPair.getLeft().equals(currencyPair.getRight());
-    }
 }

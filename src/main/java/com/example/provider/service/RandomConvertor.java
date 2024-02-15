@@ -21,4 +21,6 @@ public class RandomConvertor implements ConvertStrategy {
     public float getRate() {
         return RandomNumber.randomFloat(this.min, this.max);
     }
+
+
 }
